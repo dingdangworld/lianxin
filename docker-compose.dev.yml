@@ -1,0 +1,30 @@
+# Development override for docker-compose.yml
+# Use this file for development-specific configurations
+# Run with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  user-service:
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+      - ENABLE_DEBUG_MODE=true
+      - DB_LOGGING_ENABLED=true
+      - REDIS_LOGGING_ENABLED=true
+    volumes:
+      # Mount source code for hot reloading during development
+      - ./services/user-service/src:/app/src:ro
+      - ./shared:/app/shared:ro
+    command: npm run dev
+
+  mysql:
+    environment:
+      - MYSQL_GENERAL_LOG=1
+      - MYSQL_GENERAL_LOG_FILE=/var/lib/mysql/general.log
+    volumes:
+      # Mount additional development data
+      - ./services/user-service/seeders:/docker-entrypoint-initdb.d/seeders:ro
+
+  redis:
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --loglevel debug

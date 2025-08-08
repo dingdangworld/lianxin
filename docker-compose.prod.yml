@@ -1,0 +1,60 @@
+# Production override for docker-compose.yml
+# Use this file for production-specific configurations
+# Run with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+version: '3.8'
+
+services:
+  user-service:
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=warn
+      - ENABLE_DEBUG_MODE=false
+      - DB_LOGGING_ENABLED=false
+      - REDIS_LOGGING_ENABLED=false
+      - COMPRESSION_ENABLED=true
+      - ENABLE_METRICS=true
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  mysql:
+    environment:
+      - MYSQL_GENERAL_LOG=0
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    volumes:
+      # Production-specific MySQL configuration
+      - ./config/mysql/prod.cnf:/etc/mysql/conf.d/prod.cnf:ro
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --loglevel notice
+
+  # Remove adminer in production for security
+  adminer:
+    profiles:
+      - debug
